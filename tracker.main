@@ -1,0 +1,63 @@
+import requests
+import json
+import time
+
+# Configuration
+API_KEY = "YOUR_HYPIXEL_API_KEY"  # Replace with your Hypixel API key
+PLAYER_NAME = "your_player_name"  # Replace with the Minecraft player name you want to track
+LOG_FILE = "hypixel_player_log.json"
+INTERVAL = 60  # Check every 60 seconds
+
+def get_player_uuid(api_key, player_name):
+    url = f"https://api.hypixel.net/player?key={api_key}&name={player_name}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if data['success']:
+            return data['player']['uuid']
+        else:
+            print(f"Error: {data['cause']}")
+            return None
+    except requests.RequestException as e:
+        print(f"Error fetching player UUID: {e}")
+        return None
+
+def get_player_stats(api_key, player_uuid):
+    url = f"https://api.hypixel.net/player?key={api_key}&uuid={player_uuid}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if data['success']:
+            return data['player']
+        else:
+            print(f"Error: {data['cause']}")
+            return None
+    except requests.RequestException as e:
+        print(f"Error fetching player stats: {e}")
+        return None
+
+def log_player_stats(stats, log_file):
+    log_entry = {
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "stats": stats
+    }
+    try:
+        with open(log_file, "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+    except IOError as e:
+        print(f"Error writing to log file: {e}")
+
+def main():
+    player_uuid = get_player_uuid(API_KEY, PLAYER_NAME)
+    if player_uuid:
+        while True:
+            stats = get_player_stats(API_KEY, player_uuid)
+            if stats is not None:
+                print(f"Player stats for {PLAYER_NAME}: {json.dumps(stats, indent=2)}")
+                log_player_stats(stats, LOG_FILE)
+            time.sleep(INTERVAL)
+
+if __name__ == "__main__":
+    main()
